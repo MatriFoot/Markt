@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>FC Маркетплейс</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --panel: #16213e;
+      --accent: #e94560;
+      --gold: #f7af32;
+      --text: #ffffff;
+      --dim: #a0a0b0;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .balance {
+      font-weight: bold;
+      color: var(--gold);
+    }
+    main {
+      padding: 1.5rem;
+    }
+    h2 { margin-top: 0; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.2rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid var(--dim);
+      padding: 8px 12px;
+      color: var(--dim);
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .tab-btn.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(233, 69, 96, 0.15);
+    }
+    #inventory-view, #marketplace-view {
+      display: none;
+    }
+    #inventory-view.active, #marketplace-view.active {
+      display: block;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    .card-image {
+      width: 100%;
+      height: 120px;
+      background: #0f3460;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      font-size: 0.85rem;
+    }
+    .card h3 {
+      margin: 4px 0 6px 0;
+      font-size: 1rem;
+    }
+    .card .price-mine, .card .price-market {
+      font-size: 0.85rem;
+    }
+    .price-mine { color: var(--dim); }
+    .price-market { color: var(--gold); font-weight: 600; }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: var(--panel);
+      padding: 20px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+    }
+    .modal h3 { margin-top: 0; }
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 14px;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FC Маркетплейс</h1>
+    <div class="balance">Баланс: <span id="balance-amount">1500</span> FC</div>
+  </header>
+
+  <main>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('inventory')">Инвентарь</button>
+      <button class="tab-btn" onclick="switchTab('marketplace')">Маркетплейс</button>
+    </div>
+
+    <!-- Инвентарь -->
+    <div id="inventory-view" class="active">
+      <h2>Мой инвентарь</h2>
+      <div class="grid" id="inventory-grid"></div>
+    </div>
+
+    <!-- Маркетплейс -->
+    <div id="marketplace-view">
+      <h2>Маркетплейс</h2>
+      <div class="grid" id="marketplace-grid"></div>
+    </div>
+  </main>
+
+  <!-- Модалка просмотра скина -->
+  <div class="modal" id="item-modal">
+    <div class="modal-content">
+      <div class="card-image" id="modal-image" style="height:180px; margin-bottom:12px;"></div>
+      <h3 id="modal-name">Название</h3>
+      <p>Рыночная цена: <span id="modal-market" class="price-market">0 FC</span></p>
+      <p>Ваша цена: <span id="modal-mine" class="price-mine">0 FC</span></p>
+      <button class="btn" onclick="closeModal()">Закрыть</button>
+    </div>
+  </div>
+
+  <script>
+    const skins = [
+      { id: 1, name: "АВМ Пустошь", market: 850, mine: 720, color: "#4a3b2e" },
+      { id: 2, name: "Кобра Тень", market: 1200, mine: 1050, color: "#1a1110" },
+      { id: 3, name: "Феникс Рассвет", market: 950, mine: 880, color: "#ff5e5b" },
+      { id: 4, name: "Ледяной Клинок", market: 650, mine: 590, color: "#3b82c4" },
+      { id: 5, name: "Вулкан", market: 1100, mine: 980, color: "#d63333" },
+      { id: 6, name: "Ночной Охотник", market: 750, mine: 670, color: "#2b2b2b" },
+      { id: 7, name: "Изумруд", market: 550, mine: 490, color: "#0f9b8e" },
+      { id: 8, name: "Песчаная Буря", market: 400, mine: 350, color: "#c2a87e" }
+    ];
+
+    let balance = 1500;
+
+    function renderGrid(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.onclick = () => openModal(item);
+        card.innerHTML = `
+          <div class="card-image" style="background:${item.color}"></div>
+          <h3>${item.name}</h3>
+          <p class="price-mine">Ваша цена: ${item.mine} FC</p>
+          <p class="price-market">Рыночная: ${item.market} FC</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll("#inventory-view, #marketplace-view").forEach(v => v.classList.remove("active"));
+
+      if (tab === "inventory") {
+        document.querySelector('[onclick="switchTab(\'inventory\')"]').classList.add("active");
+        document.getElementById("inventory-view").classList.add("active");
+        renderGrid("inventory-grid", skins);
+      } else {
+        document.querySelector('[onclick="switchTab(\'marketplace\')"]').classList.add("active");
+        document.getElementById("marketplace-view").classList.add("active");
+        // Для маркетплейса можно показывать не все, а часть — тут все для простоты
+        renderGrid("marketplace-grid", skins.slice(0, 4));
+      }
+    }
+
+    function openModal(item) {
+      const modal = document.getElementById("item-modal");
+      document.getElementById("modal-name").textContent = item.name;
+      document.getElementById("modal-market").textContent = `${item.market} FC`;
+      document.getElementById("modal-mine").textContent = `${item.mine} FC`;
+      document.getElementById("modal-image").style.background = item.color;
+      modal.classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("item-modal").classList.remove("open");
+    }
+
+    // Инициализация
+    switchTab("inventory");
+  </script>
+</body>
+  </html>
